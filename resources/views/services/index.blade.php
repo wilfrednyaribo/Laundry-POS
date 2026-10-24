@@ -17,6 +17,7 @@
                 --service-white: #ffffff;
                 --service-success: #198754;
                 --service-danger: #dc3545;
+                --service-warning: #f59e0b;
             }
 
             .services-page {
@@ -364,7 +365,7 @@
 
             .services-table {
                 width: 100%;
-                min-width: 650px;
+                min-width: 700px;
                 border-collapse: separate;
                 border-spacing: 0;
             }
@@ -459,23 +460,46 @@
                 gap: 7px;
             }
 
-            .btn-delete {
+            /* -------------------------------------------------------
+               ACTION BUTTONS (Edit + Delete)
+            ------------------------------------------------------- */
+
+            .btn-action {
                 width: 35px;
                 height: 35px;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
                 border-radius: 9px;
-                border: 1px solid #f0d7dc;
+                border: 1px solid transparent;
+                transition: .2s ease;
+                cursor: pointer;
+            }
+
+            .btn-edit {
+                border-color: #d7e3f5;
+                background: #f3f8ff;
+                color: var(--service-primary);
+            }
+
+            .btn-edit:hover {
+                background: var(--service-primary);
+                border-color: var(--service-primary);
+                color: #fff;
+                transform: translateY(-1px);
+            }
+
+            .btn-delete {
+                border-color: #f0d7dc;
                 background: #fff7f8;
                 color: var(--service-danger);
-                transition: .2s ease;
             }
 
             .btn-delete:hover {
                 background: var(--service-danger);
                 border-color: var(--service-danger);
                 color: #fff;
+                transform: translateY(-1px);
             }
 
             /* -------------------------------------------------------
@@ -546,6 +570,50 @@
                 color: var(--service-muted);
                 font-size: .82rem;
                 margin: 0;
+            }
+
+            /* -------------------------------------------------------
+               EDIT MODAL
+            ------------------------------------------------------- */
+
+            .modal-content-premium {
+                border: 0;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 30px 70px rgba(7, 26, 51, .25);
+            }
+
+            .modal-header-premium {
+                padding: 20px 22px;
+                border-bottom: 1px solid var(--service-border);
+                background: #fff;
+            }
+
+            .modal-title-premium {
+                display: flex;
+                align-items: center;
+                gap: 11px;
+                color: var(--service-navy);
+                font-weight: 800;
+                font-size: 1rem;
+                margin: 0;
+            }
+
+            .modal-body-premium {
+                padding: 22px;
+            }
+
+            .current-image-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-top: 8px;
+                padding: 4px 9px;
+                border-radius: 8px;
+                background: #effcf5;
+                color: #137a4d;
+                font-size: .7rem;
+                font-weight: 700;
             }
 
             /* -------------------------------------------------------
@@ -718,6 +786,17 @@
                     <div>
                         <strong>Success</strong>
                         <div>{{ session('success') }}</div>
+                    </div>
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="premium-alert premium-alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+
+                    <div>
+                        <strong>Unable to complete request</strong>
+                        <div>{{ session('error') }}</div>
                     </div>
                 </div>
             @endif
@@ -1052,8 +1131,8 @@
                                             Unit
                                         </th>
 
-                                        <th style="width:90px;">
-                                            Action
+                                        <th style="width:130px;">
+                                            Actions
                                         </th>
                                     </tr>
                                 </thead>
@@ -1125,30 +1204,31 @@
 
                                             </td>
 
-                                            {{-- ACTION --}}
+                                            {{-- ACTIONS --}}
                                             <td>
 
                                                 <div class="action-group">
 
-                                                    <form
-                                                        action="{{ route('services.destroy', $service->id) }}"
-                                                        method="POST"
-                                                        onsubmit="return confirmDelete('{{ addslashes($service->name) }}')"
-                                                        class="m-0"
+                                                    {{-- EDIT BUTTON --}}
+                                                    <button
+                                                        type="button"
+                                                        class="btn-action btn-edit"
+                                                        title="Edit service"
+                                                        aria-label="Edit {{ $service->name }}"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#editServiceModal"
+                                                        data-id="{{ $service->id }}"
+                                                        data-name="{{ $service->name }}"
+                                                        data-price="{{ $service->price }}"
+                                                        data-unit="{{ $service->unit }}"
+                                                        data-image="@if($service->image){{ asset('images/services/' . $service->image) }}@endif"
+                                                        data-action="{{ route('services.update', $service->id) }}"
                                                     >
-                                                        @csrf
-                                                        @method('DELETE')
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
 
-                                                        <button
-                                                            type="submit"
-                                                            class="btn-delete"
-                                                            title="Delete service"
-                                                            aria-label="Delete {{ $service->name }}"
-                                                        >
-                                                            <i class="bi bi-trash3"></i>
-                                                        </button>
-
-                                                    </form>
+                                                    {{-- DELETE BUTTON --}}
+                                                   
 
                                                 </div>
 
@@ -1197,6 +1277,292 @@
 
         </div>
 
+        {{-- =====================================================
+             EDIT SERVICE MODAL
+        ====================================================== --}}
+
+        <div
+            class="modal fade"
+            id="editServiceModal"
+            tabindex="-1"
+            aria-labelledby="editServiceModalLabel"
+            aria-hidden="true"
+        >
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+
+                <div class="modal-content modal-content-premium">
+
+                    <div class="modal-header modal-header-premium">
+
+                        <h5 class="modal-title-premium" id="editServiceModalLabel">
+                            <span class="service-card-title-icon">
+                                <i class="bi bi-pencil-square"></i>
+                            </span>
+
+                            Edit Service
+                        </h5>
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"
+                        ></button>
+
+                    </div>
+
+                    <div class="modal-body modal-body-premium">
+
+                        <form
+                            action="#"
+                            method="POST"
+                            enctype="multipart/form-data"
+                            id="editServiceForm"
+                        >
+                            @csrf
+                            @method('PUT')
+
+                            {{-- IMAGE --}}
+                            <div class="mb-4">
+
+                                <label class="form-label-premium">
+                                    Service Image
+                                </label>
+
+                                <div class="image-upload-box">
+
+                                    <div class="image-upload-content">
+
+                                        <div class="upload-icon">
+                                            <i class="bi bi-cloud-arrow-up"></i>
+                                        </div>
+
+                                        <div class="flex-grow-1">
+                                            <div class="upload-title">
+                                                Upload new image (optional)
+                                            </div>
+
+                                            <p class="upload-help">
+                                                JPG or PNG · Maximum 2MB · Leave blank to keep current
+                                            </p>
+                                        </div>
+
+                                        <label
+                                            for="editServiceImage"
+                                            class="btn btn-sm btn-outline-primary"
+                                            style="border-radius: 9px;"
+                                        >
+                                            Browse
+                                        </label>
+
+                                    </div>
+
+                                    <input
+                                        type="file"
+                                        name="image"
+                                        id="editServiceImage"
+                                        class="d-none"
+                                        accept="image/jpeg,image/png,image/jpg"
+                                    >
+
+                                    <div class="image-preview" id="editImagePreview">
+                                        <img
+                                            src=""
+                                            alt="Service preview"
+                                            id="editPreviewImage"
+                                        >
+
+                                        <button
+                                            type="button"
+                                            class="remove-preview"
+                                            id="editRemovePreview"
+                                            aria-label="Remove image"
+                                        >
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </div>
+
+                                    {{-- Hidden flag to tell controller whether to clear the image --}}
+                                    <input
+                                        type="hidden"
+                                        name="remove_image"
+                                        id="editRemoveImageFlag"
+                                        value="0"
+                                    >
+
+                                    <div id="currentImageTag" class="current-image-tag" style="display:none;">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        Current image will be kept
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            {{-- SERVICE NAME --}}
+                            <div class="mb-3">
+
+                                <label
+                                    for="editServiceName"
+                                    class="form-label-premium"
+                                >
+                                    Service Name
+                                </label>
+
+                                <div class="input-icon-wrapper">
+                                    <i class="bi bi-stars"></i>
+
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        id="editServiceName"
+                                        class="form-control-premium"
+                                        value=""
+                                        placeholder="e.g. Wash & Fold"
+                                        maxlength="255"
+                                        required
+                                    >
+                                </div>
+
+                            </div>
+
+                            {{-- PRICE + UNIT --}}
+                            <div class="row g-3 mb-3">
+
+                                <div class="col-6">
+
+                                    <label
+                                        for="editServicePrice"
+                                        class="form-label-premium"
+                                    >
+                                        Price
+                                    </label>
+
+                                    <div class="input-icon-wrapper">
+                                        <i class="bi bi-currency-dollar"></i>
+
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            name="price"
+                                            id="editServicePrice"
+                                            class="form-control-premium"
+                                            value=""
+                                            placeholder="5.00"
+                                            required
+                                        >
+                                    </div>
+
+                                </div>
+
+                                <div class="col-6">
+
+                                    <label
+                                        for="editServiceUnit"
+                                        class="form-label-premium"
+                                    >
+                                        Billing Unit
+                                    </label>
+
+                                    <select
+                                        name="unit"
+                                        id="editServiceUnit"
+                                        class="form-select-premium"
+                                        required
+                                    >
+                                        <option value="kg">
+                                            Kilogram
+                                        </option>
+
+                                        <option value="piece">
+                                            Piece
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                            </div>
+
+                            {{-- INFO --}}
+                            <div
+                                class="p-3 mb-4"
+                                style="
+                                    background:#f6f9fd;
+                                    border:1px solid #e7edf5;
+                                    border-radius:12px;
+                                "
+                            >
+                                <div class="d-flex gap-2">
+
+                                    <i
+                                        class="bi bi-info-circle-fill"
+                                        style="color:#0d6efd;"
+                                    ></i>
+
+                                    <div>
+                                        <div
+                                            style="
+                                color:#162033;
+                                font-size:.75rem;
+                                font-weight:750;
+                                margin-bottom:2px;
+                            "
+                                        >
+                                            Updating service
+                                        </div>
+
+                                        <div
+                                            style="
+                                color:#718096;
+                                font-size:.7rem;
+                                line-height:1.5;
+                            "
+                                        >
+                                            Changes will immediately reflect in walk-in POS and online orders.
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            {{-- ACTIONS --}}
+                            <div class="d-flex gap-2">
+
+                                <button
+                                    type="button"
+                                    class="btn btn-light flex-shrink-0"
+                                    data-bs-dismiss="modal"
+                                    style="
+                                        min-width: 110px;
+                                        min-height: 46px;
+                                        border-radius: 11px;
+                                        font-weight: 750;
+                                        border: 1px solid var(--service-border);
+                                    "
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    class="btn-primary-premium"
+                                >
+                                    <i class="bi bi-check-lg me-2"></i>
+                                    Save Changes
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
     @endsection
 
 
@@ -1205,16 +1571,14 @@
         <script>
             document.addEventListener('DOMContentLoaded', function () {
 
+                /* =====================================================
+                   ADD SERVICE FORM — IMAGE PREVIEW
+                ===================================================== */
+
                 const imageInput = document.getElementById('serviceImage');
                 const imagePreview = document.getElementById('imagePreview');
                 const previewImage = document.getElementById('previewImage');
                 const removePreview = document.getElementById('removePreview');
-
-                /*
-                |--------------------------------------------------------------------------
-                | IMAGE PREVIEW
-                |--------------------------------------------------------------------------
-                */
 
                 if (imageInput) {
 
@@ -1265,12 +1629,6 @@
                     });
                 }
 
-                /*
-                |--------------------------------------------------------------------------
-                | REMOVE IMAGE PREVIEW
-                |--------------------------------------------------------------------------
-                */
-
                 if (removePreview) {
 
                     removePreview.addEventListener('click', function () {
@@ -1282,11 +1640,9 @@
                     });
                 }
 
-                /*
-                |--------------------------------------------------------------------------
-                | FORM SUBMIT FEEDBACK
-                |--------------------------------------------------------------------------
-                */
+                /* =====================================================
+                   ADD SERVICE FORM — SUBMIT FEEDBACK
+                ===================================================== */
 
                 const serviceForm = document.getElementById('serviceForm');
 
@@ -1311,14 +1667,178 @@
                     });
                 }
 
+                /* =====================================================
+                   EDIT SERVICE MODAL — POPULATE & HANDLE
+                ===================================================== */
+
+                const editModal = document.getElementById('editServiceModal');
+                const editForm = document.getElementById('editServiceForm');
+                const editImageInput = document.getElementById('editServiceImage');
+                const editImagePreview = document.getElementById('editImagePreview');
+                const editPreviewImage = document.getElementById('editPreviewImage');
+                const editRemovePreviewBtn = document.getElementById('editRemovePreview');
+                const editRemoveImageFlag = document.getElementById('editRemoveImageFlag');
+                const currentImageTag = document.getElementById('currentImageTag');
+
+                // Populate modal when edit button is clicked
+                if (editModal) {
+
+                    editModal.addEventListener('show.bs.modal', function (event) {
+
+                        const trigger = event.relatedTarget;
+
+                        if (!trigger) {
+                            return;
+                        }
+
+                        const id = trigger.dataset.id;
+                        const name = trigger.dataset.name;
+                        const price = trigger.dataset.price;
+                        const unit = trigger.dataset.unit;
+                        const image = trigger.dataset.image;
+                        const action = trigger.dataset.action;
+
+                        // Set form action
+                        editForm.action = action;
+
+                        // Populate fields
+                        document.getElementById('editServiceName').value = name;
+                        document.getElementById('editServicePrice').value = price;
+                        document.getElementById('editServiceUnit').value = unit;
+
+                        // Reset image input
+                        editImageInput.value = '';
+                        editRemoveImageFlag.value = '0';
+
+                        // Show current image if exists
+                        if (image) {
+                            editPreviewImage.src = image;
+                            editImagePreview.style.display = 'block';
+                            currentImageTag.style.display = 'inline-flex';
+                            currentImageTag.innerHTML =
+                                '<i class="bi bi-check-circle-fill"></i> ' +
+                                'Current image will be kept';
+                        } else {
+                            editPreviewImage.src = '';
+                            editImagePreview.style.display = 'none';
+                            currentImageTag.style.display = 'none';
+                        }
+
+                        // Reset submit button text
+                        const submitBtn = editForm.querySelector('button[type="submit"]');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML =
+                                '<i class="bi bi-check-lg me-2"></i> Save Changes';
+                        }
+                    });
+                }
+
+                // Handle new image selection in edit modal
+                if (editImageInput) {
+
+                    editImageInput.addEventListener('change', function (event) {
+
+                        const file = event.target.files[0];
+
+                        if (!file) {
+                            return;
+                        }
+
+                        const allowedTypes = [
+                            'image/jpeg',
+                            'image/png',
+                            'image/jpg'
+                        ];
+
+                        if (!allowedTypes.includes(file.type)) {
+
+                            alert('Please select a JPG or PNG image.');
+
+                            editImageInput.value = '';
+                            editImagePreview.style.display = 'none';
+
+                            return;
+                        }
+
+                        if (file.size > 2 * 1024 * 1024) {
+
+                            alert('The selected image is larger than 2MB.');
+
+                            editImageInput.value = '';
+                            editImagePreview.style.display = 'none';
+
+                            return;
+                        }
+
+                        const reader = new FileReader();
+
+                        reader.onload = function (e) {
+
+                            editPreviewImage.src = e.target.result;
+                            editImagePreview.style.display = 'block';
+                            currentImageTag.style.display = 'none';
+                            editRemoveImageFlag.value = '0';
+
+                        };
+
+                        reader.readAsDataURL(file);
+                    });
+                }
+
+                // Remove image preview in edit modal
+                if (editRemovePreviewBtn) {
+
+                    editRemovePreviewBtn.addEventListener('click', function () {
+
+                        editImageInput.value = '';
+                        editPreviewImage.src = '';
+                        editImagePreview.style.display = 'none';
+
+                        // If there was a current image, flag for removal
+                        const hadImage = editForm.dataset.hadImage === '1';
+
+                        if (hadImage) {
+                            editRemoveImageFlag.value = '1';
+                            currentImageTag.style.display = 'inline-flex';
+                            currentImageTag.innerHTML =
+                                '<i class="bi bi-exclamation-triangle-fill"></i> ' +
+                                'Image will be removed on save';
+                            currentImageTag.style.background = '#fff5f6';
+                            currentImageTag.style.color = '#b02a37';
+                        }
+
+                    });
+                }
+
+                // Edit form submit feedback
+                if (editForm) {
+
+                    editForm.addEventListener('submit', function () {
+
+                        const submitButton = editForm.querySelector(
+                            'button[type="submit"]'
+                        );
+
+                        if (!submitButton) {
+                            return;
+                        }
+
+                        submitButton.disabled = true;
+
+                        submitButton.innerHTML =
+                            '<span class="spinner-border spinner-border-sm me-2"></span>' +
+                            'Saving...';
+
+                    });
+                }
+
             });
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | DELETE CONFIRMATION
-            |--------------------------------------------------------------------------
-            */
+            /* =====================================================
+               DELETE CONFIRMATION
+            ===================================================== */
 
             function confirmDelete(serviceName) {
 
